@@ -1,0 +1,47 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  memory_limiter:
+    check_interval: 10s
+    limit_percentage: 50
+    spike_limit_percentage: 30
+  batch:
+  
+exporters:
+  logging:
+    loglevel: info
+
+  datadog:
+    api:
+      site: datadoghq.com
+      key: ""
+
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog, otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog, otlp]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog, logging, otlp]

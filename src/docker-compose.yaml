@@ -1,0 +1,91 @@
+﻿version: '3.8'
+name: todo
+services:
+  # # Generate fake traces...
+  # k6-tracing:
+  #   image: ghcr.io/grafana/xk6-client-tracing:v0.0.2
+  #   environment:
+  #     - ENDPOINT=otel-collector:4317
+  #   restart: always
+  #   depends_on:
+  #     - otel-collector
+  #   networks:
+  #     - ot-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib-dev:latest
+    command: ["--config=/etc/otel-collector-config.yaml", ""]
+    volumes:
+      - ../otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # gRPC receiver
+      - "4318:4318" # HTTP receiver
+    networks:
+      - ot-network
+
+  mongodb:
+    image: mongodb/mongodb-community-server
+    container_name: todo-mongodb
+    restart: always
+    ports:
+      - "27019:27017"
+    networks:
+      - ot-network
+    environment:
+      # So you don't have to use root, but you can if you like
+      MONGO_INITDB_ROOT_USERNAME: root
+      # Password for root access
+      MONGO_INITDB_ROOT_PASSWORD: mongo123@
+
+    expose:
+    # Opens port 27017 on the container
+    - "27017"
+
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./otel/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin  # Defina sua senha do Grafana aqui
+  #   networks:
+  #     - ot-network
+
+  # loki:
+  #   image: grafana/loki:latest
+  #   ports:
+  #     - "3100:3100"
+  #   networks:
+  #     - ot-network
+
+  # tempo:
+  #   image: grafana/tempo:latest
+  #   command: [ "-config.file=/etc/tempo.yaml" ]
+  #   volumes:
+  #     - ./otel/tempo.yaml:/etc/tempo.yaml
+  #   ports:
+  #     - "3200"   # tempo
+  #     - "4317"  # otlp grpc
+  #     - "4318"  # otlp http
+  #   networks:
+  #     - ot-network
+
+  todo-api:
+    container_name: todo-api
+    build: 
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - otel-collector
+      - mongodb
+    networks:
+      - ot-network
+    volumes:
+      - ./ToDo.API/appsettings.json:/app/appsettings.json
+
+networks:
+  ot-network:

@@ -1,0 +1,5 @@
+@ToDo.API_HostAddress = http://localhost:8080
+
+GET {{ToDo.API_HostAddress}}/api/todo
+
+###
